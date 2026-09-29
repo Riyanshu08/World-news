@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World News - 3D Intelligence Dashboard</title>
+    <!-- Tailwind CSS for futuristic styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js for 3D Background Effect -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        #canvas3d {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+        .glass {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen font-sans selection:bg-cyan-500 selection:text-black">
+
+    <!-- 3D Background Container -->
+    <canvas id="canvas3d"></canvas>
+
+    <!-- App Header -->
+    <header class="glass sticky top-0 z-50 border-b border-slate-800 px-6 py-4 flex justify-between items-center shadow-2xl">
+        <div class="flex items-center space-x-3">
+            <div class="w-4 h-4 rounded-full bg-cyan-400 animate-ping"></div>
+            <h1 class="text-2xl font-extrabold tracking-wider bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent">
+                WORLD NEWS <span class="text-xs text-slate-400 font-mono tracking-normal">[LIVE 3D FEED]</span>
+            </h1>
+        </div>
+        <div id="status" class="text-xs font-mono text-cyan-400 bg-cyan-950/50 px-3 py-1 rounded-full border border-cyan-800">
+            System Synchronized
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="max-w-7xl mx-auto px-6 py-10">
+        <div class="text-center mb-12">
+            <h2 class="text-4xl md:text-5xl font-black tracking-tight mb-4">Global Intelligence Matrix</h2>
+            <p class="text-slate-400 max-w-xl mx-auto">Real-time worldwide news telemetry rendered dynamically with Python backend integration.</p>
+        </div>
+
+        <!-- News Feed Grid Container -->
+        <div id="news-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Dynamic Cards Populated via JS -->
+            <div class="glass p-6 rounded-2xl animate-pulse">
+                <div class="h-4 bg-slate-700 rounded w-3/4 mb-4"></div>
+                <div class="h-4 bg-slate-700 rounded w-1/2"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Script to Fetch Backend Data and Render 3D Scene -->
+    <script>
+        // --- 3D THREE.JS BACKGROUND ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.querySelector('#canvas3d'), alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // Create 3D floating grid/particles
+        const geometry = new THREE.BufferGeometry();
+        const count = 1500;
+        const positions = new Float32Array(count * 3);
+
+        for(let i = 0; i < count * 3; i++) {
+            positions[i] = (Math.random() - 0.5) * 50;
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const material = new THREE.PointsMaterial({ size: 0.08, color: 0x06b6d4 });
+        const particles = new THREE.Points(geometry, material);
+        scene.add(particles);
+
+        camera.position.z = 15;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            particles.rotation.x += 0.0005;
+            particles.rotation.y += 0.001;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- FETCH LIVE NEWS FROM PYTHON BACKEND ---
+        async function fetchNews() {
+            try {
+                const response = await fetch('/api/news');
+                const articles = await response.json();
+                const container = document.getElementById('news-container');
+                container.innerHTML = '';
+
+                articles.forEach(article => {
+                    let badgeColor = 'bg-slate-800 text-slate-300 border-slate-700';
+                    if(article.sentiment === 'Positive') badgeColor = 'bg-emerald-950/80 text-emerald-400 border-emerald-800';
+                    if(article.sentiment === 'Negative') badgeColor = 'bg-rose-950/80 text-rose-400 border-rose-800';
+
+                    const card = document.createElement('div');
+                    card.className = "glass p-6 rounded-2xl flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] hover:border-cyan-500/50 shadow-xl group";
+                    card.innerHTML = `
+                        <div>
+                            <div class="flex justify-between items-center mb-4">
+                                <span class="text-xs font-mono text-slate-400">${article.published}</span>
+                                <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border ${badgeColor}">${article.sentiment}</span>
+                            </div>
+                            <h3 class="text-lg font-semibold text-slate-100 group-hover:text-cyan-300 transition-colors mb-4">${article.title}</h3>
+                        </div>
+                        <a href="${article.link}" target="_blank" class="inline-flex items-center text-sm font-medium text-cyan-400 hover:text-cyan-300 mt-4">
+                            Access Telemetry &rarr;
+                        </a>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (err) {
+                console.error("Error fetching live updates:", err);
+                document.getElementById('status').innerText = "Sync Error - Retrying...";
+                document.getElementById('status').className = "text-xs font-mono text-rose-400 bg-rose-950/50 px-3 py-1 rounded-full border border-rose-800";
+            }
+        }
+
+        fetchNews();
+        // Refresh feed every 60 seconds automatically
+        setInterval(fetchNews, 60000);
+    </script>
+</body>
+</html>
